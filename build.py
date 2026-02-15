@@ -178,6 +178,42 @@ def build_signatories_html(users, stats):
     return h
 
 
+FAQS = [
+    {
+        "q": "How is eval-driven development different from test-driven development?",
+        "a": "TDD uses binary pass/fail criteria that work for deterministic code. AI systems are probabilistic\u2014outputs vary across runs, models, and prompts. Eval-driven development requires defining success thresholds before writing tests: what score is good enough? What regression is acceptable? That threshold-setting step is the part that experienced test-driven developers do intuitively but rarely formalize. EDD makes it explicit and mandatory.",
+    },
+]
+
+
+def build_faq_html():
+    """Build the FAQ section HTML."""
+    h = '<h2 id="faq">FAQ</h2>\n'
+    for faq in FAQS:
+        h += f"<h3>{html_mod.escape(faq['q'])}</h3>\n"
+        h += f"<p>{html_mod.escape(faq['a'])}</p>\n"
+    return h
+
+
+def build_faq_schema():
+    """Build FAQPage JSON-LD."""
+    return json.dumps({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": faq["q"],
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq["a"],
+                },
+            }
+            for faq in FAQS
+        ],
+    })
+
+
 def build_og_image(count):
     """Generate a 1200x630 OG image with the signatory count."""
     W, H = 1200, 630
@@ -240,7 +276,7 @@ def build_og_image(count):
     return path
 
 
-def build_page(body_html, signatories_html):
+def build_page(body_html, faq_html, signatories_html):
     """Generate the full HTML page."""
     title = SITE["title"]
     desc = SITE["description"]
@@ -284,6 +320,7 @@ def build_page(body_html, signatories_html):
 <meta name="robots" content="index, follow">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='4' y='26' font-size='28' font-family='monospace'%3E%E2%9C%93%3C/text%3E%3C/svg%3E">
 <script type="application/ld+json">{json_ld}</script>
+<script type="application/ld+json">{build_faq_schema()}</script>
 <style>
 *, *::before, *::after {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ font-family: 'Courier New', Courier, monospace; max-width: 650px; margin: 40px auto; padding: 0 20px; line-height: 1.6; background: #fff; color: #111; font-size: 16px; }}
@@ -311,6 +348,7 @@ footer a:hover {{ color: #000; }}
 <main>
   <article>
     {body_html}
+    {faq_html}
     {signatories_html}
   </article>
 </main>
@@ -337,11 +375,12 @@ def main():
     print(f"  {stats['forks']} forks, {stats['watchers']} watching", file=sys.stderr)
 
     body_html = md_to_html(readme_text)
+    faq_html = build_faq_html()
     signatories_html = build_signatories_html(users, stats)
 
     OUTPUT.mkdir(exist_ok=True)
     build_og_image(len(users))
-    (OUTPUT / "index.html").write_text(build_page(body_html, signatories_html))
+    (OUTPUT / "index.html").write_text(build_page(body_html, faq_html, signatories_html))
     (OUTPUT / "sitemap.xml").write_text(
         f'<?xml version="1.0" encoding="UTF-8"?>\n'
         f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
