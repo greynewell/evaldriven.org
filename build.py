@@ -173,7 +173,8 @@ def build_signatories_html(users, stats):
     else:
         h += "<p><em>Be the first to sign.</em></p>\n"
     h += f'<p style="font-size: 0.8em; color: #777;">'
-    h += f'{stats["watchers"]} watching &middot; {stats["forks"]} forks'
+    h += f'<a href="{repo_url}/watchers" style="color: #777;">{stats["watchers"]} watching</a>'
+    h += f' &middot; <a href="{repo_url}/forks" style="color: #777;">{stats["forks"]} forks</a>'
     h += '</p>\n'
     return h
 
