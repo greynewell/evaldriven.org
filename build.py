@@ -165,7 +165,7 @@ def build_signatories_html(users, stats):
     h += f'<p><a href="{repo_url}">Star this repo</a> to sign the manifesto.'
     h += f' <a href="{repo_url}/fork">Fork it</a> to create your own.</p>\n'
     if users:
-        h += "<ul>\n"
+        h += '<ul style="columns: 2; column-gap: 1.5rem; list-style: none; padding-left: 0;">\n'
         for login in users:
             if login.strip():
                 h += f'<li><a href="https://github.com/{login}">{login}</a></li>\n'
