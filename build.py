@@ -144,11 +144,26 @@ def fetch_stargazers():
     return users
 
 
-def build_signatories_html(users):
+def fetch_repo_stats():
+    """Fetch fork and watcher counts from the repo."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", f"repos/{SITE['repo']}",
+             "--jq", "[.forks_count, .subscribers_count] | @tsv"],
+            capture_output=True, text=True, timeout=30,
+        )
+        parts = result.stdout.strip().split("\t")
+        return {"forks": int(parts[0]), "watchers": int(parts[1])}
+    except Exception:
+        return {"forks": 0, "watchers": 0}
+
+
+def build_signatories_html(users, stats):
     """Build the signatories section."""
     repo_url = f"https://github.com/{SITE['repo']}"
     h = '<h2 id="signatories">Signatories</h2>\n'
-    h += f'<p><a href="{repo_url}">Star this repo</a> to sign the manifesto.</p>\n'
+    h += f'<p><a href="{repo_url}">Star this repo</a> to sign the manifesto.'
+    h += f' <a href="{repo_url}/fork">Fork it</a> to create your own.</p>\n'
     if users:
         h += "<ul>\n"
         for login in users:
@@ -157,6 +172,9 @@ def build_signatories_html(users):
         h += "</ul>\n"
     else:
         h += "<p><em>Be the first to sign.</em></p>\n"
+    h += f'<p style="font-size: 0.8em; color: #777;">'
+    h += f'{stats["watchers"]} watching &middot; {stats["forks"]} forks'
+    h += '</p>\n'
     return h
 
 
@@ -326,8 +344,11 @@ def main():
     users = fetch_stargazers()
     print(f"  Found {len(users)} stargazers", file=sys.stderr)
 
+    stats = fetch_repo_stats()
+    print(f"  {stats['forks']} forks, {stats['watchers']} watching", file=sys.stderr)
+
     body_html = md_to_html(readme_text)
-    signatories_html = build_signatories_html(users)
+    signatories_html = build_signatories_html(users, stats)
 
     OUTPUT.mkdir(exist_ok=True)
     build_og_image(len(users))
