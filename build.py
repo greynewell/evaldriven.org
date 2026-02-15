@@ -9,6 +9,8 @@ import html as html_mod
 from pathlib import Path
 from datetime import datetime
 
+from PIL import Image, ImageDraw, ImageFont
+
 ROOT = Path(__file__).parent
 OUTPUT = ROOT / "output"
 README = ROOT / "README.md"
@@ -158,6 +160,68 @@ def build_signatories_html(users):
     return h
 
 
+def build_og_image(count):
+    """Generate a 1200x630 OG image with the signatory count."""
+    W, H = 1200, 630
+    img = Image.new("RGB", (W, H), "#ffffff")
+    draw = ImageDraw.Draw(img)
+
+    # Use Courier/monospace to match the site aesthetic.
+    # DejaVu Sans Mono is available on Ubuntu runners; fall back to default.
+    def mono(size):
+        for name in ["DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf",
+                      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+                      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+                      "Courier New.ttf", "cour.ttf"]:
+            try:
+                return ImageFont.truetype(name, size)
+            except OSError:
+                continue
+        return ImageFont.load_default(size)
+
+    def bold(size):
+        for name in ["DejaVuSansMono-Bold.ttf",
+                      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+                      "Courier New Bold.ttf", "courbd.ttf"]:
+            try:
+                return ImageFont.truetype(name, size)
+            except OSError:
+                continue
+        return mono(size)
+
+    # Border
+    draw.rectangle([20, 20, W - 21, H - 21], outline="#000000", width=3)
+
+    # Checkmark
+    check_font = mono(72)
+    draw.text((W // 2, 120), "\u2713", fill="#000000", font=check_font, anchor="mm")
+
+    # Title
+    title_font = bold(52)
+    draw.text((W // 2, 220), "EVAL-DRIVEN", fill="#000000", font=title_font, anchor="mm")
+    draw.text((W // 2, 285), "DEVELOPMENT", fill="#000000", font=title_font, anchor="mm")
+
+    # Divider
+    draw.line([(200, 330), (W - 200, 330)], fill="#000000", width=2)
+
+    # Subtitle
+    sub_font = mono(30)
+    draw.text((W // 2, 380), "A manifesto for evaluation-driven", fill="#333333", font=sub_font, anchor="mm")
+    draw.text((W // 2, 420), "AI development", fill="#333333", font=sub_font, anchor="mm")
+
+    # Count
+    count_font = bold(36)
+    draw.text((W // 2, 500), f"{count} signatories", fill="#000000", font=count_font, anchor="mm")
+
+    # URL
+    url_font = mono(22)
+    draw.text((W // 2, 565), "evaldriven.org", fill="#555555", font=url_font, anchor="mm")
+
+    path = OUTPUT / "og.png"
+    img.save(path, "PNG")
+    return path
+
+
 def build_page(body_html, signatories_html):
     """Generate the full HTML page."""
     title = SITE["title"]
@@ -192,10 +256,12 @@ def build_page(body_html, signatories_html):
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{base}/">
 <meta property="og:type" content="article">
+<meta property="og:image" content="{base}/og.png">
 <meta property="og:site_name" content="{title}">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{base}/og.png">
 <link rel="canonical" href="{base}/">
 <meta name="robots" content="index, follow">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='4' y='26' font-size='28' font-family='monospace'%3E%E2%9C%93%3C/text%3E%3C/svg%3E">
@@ -264,6 +330,7 @@ def main():
     signatories_html = build_signatories_html(users)
 
     OUTPUT.mkdir(exist_ok=True)
+    build_og_image(len(users))
     (OUTPUT / "index.html").write_text(build_page(body_html, signatories_html))
     (OUTPUT / "sitemap.xml").write_text(
         f'<?xml version="1.0" encoding="UTF-8"?>\n'
