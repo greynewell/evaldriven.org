@@ -301,24 +301,13 @@ pre {{ background: #f5f5f5; border: 1px solid #ddd; padding: 1rem; overflow-x: a
 pre code {{ background: none; padding: 0; font-size: 0.875rem; }}
 blockquote {{ border-left: 3px solid #111; padding: 0.5rem 1rem; margin: 1rem 0; color: #333; }}
 hr {{ border: none; border-top: 1px solid #111; margin: 2rem 0; }}
-header {{ display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 1rem; border-bottom: 2px solid #000; margin-bottom: 2rem; }}
-header .brand {{ font-weight: 700; font-size: 0.875rem; color: #000; text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em; }}
-header nav {{ display: flex; gap: 1rem; }}
-header nav a {{ font-size: 0.8125rem; color: #555; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; }}
-header nav a:hover {{ color: #000; }}
 footer {{ margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #000; text-align: center; font-size: 0.75rem; color: #777; }}
 footer a {{ color: #555; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; }}
 footer a:hover {{ color: #000; }}
-@media (max-width: 640px) {{ body {{ margin: 20px auto; padding: 0 15px; }} header {{ flex-direction: column; gap: 0.5rem; }} footer {{ flex-direction: column; }} }}
+@media (max-width: 640px) {{ body {{ margin: 20px auto; padding: 0 15px; }} footer {{ flex-direction: column; }} }}
 </style>
 </head>
 <body>
-<header>
-  <a href="/" class="brand">evaldriven.org</a>
-  <nav>
-    <a href="https://github.com/{SITE['repo']}">source</a>
-  </nav>
-</header>
 <main>
   <article>
     {body_html}
