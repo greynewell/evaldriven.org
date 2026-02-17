@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title or site.title }}</title>
+<meta name="description" content="{{ site.description }}">
+<meta name="author" content="{{ site.author }}">
+<meta property="og:title" content="{{ site.title }}">
+<meta property="og:description" content="{{ site.description }}">
+<meta property="og:url" content="{{ site.base_url }}/">
+<meta property="og:type" content="article">
+<meta property="og:image" content="{{ site.base_url }}/og.png">
+<meta property="og:site_name" content="{{ site.title }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ site.title }}">
+<meta name="twitter:description" content="{{ site.description }}">
+<meta name="twitter:image" content="{{ site.base_url }}/og.png">
+<link rel="canonical" href="{{ site.base_url }}/">
+<meta name="robots" content="{{ robots | default('index, follow') }}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='4' y='26' font-size='28' font-family='monospace'%3E%E2%9C%93%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">{{ articleSchema | safe }}</script>
+<script type="application/ld+json">{{ faqSchema | safe }}</script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Courier New', Courier, monospace; max-width: 650px; margin: 40px auto; padding: 0 20px; line-height: 1.6; background: #fff; color: #111; font-size: 16px; }
+h1, h2, h3 { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #000; }
+h1 { font-size: 1.5rem; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+h2 { font-size: 1.125rem; margin: 2rem 0 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #000; padding-bottom: 0.25rem; }
+h3 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+p { margin: 0.75rem 0; }
+ul, ol { padding-left: 1.5rem; margin: 0.75rem 0; }
+li { margin: 0.3rem 0; }
+a { color: #111; text-decoration: underline; }
+a:hover { color: #555; }
+code { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; background: #f5f5f5; padding: 0.1em 0.3em; }
+pre { background: #f5f5f5; border: 1px solid #ddd; padding: 1rem; overflow-x: auto; margin: 1rem 0; line-height: 1.4; }
+pre code { background: none; padding: 0; font-size: 0.875rem; }
+blockquote { border-left: 3px solid #111; padding: 0.5rem 1rem; margin: 1rem 0; color: #333; }
+hr { border: none; border-top: 1px solid #111; margin: 2rem 0; }
+header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 1rem; border-bottom: 2px solid #000; margin-bottom: 2rem; }
+header .brand { font-weight: 700; font-size: 0.875rem; color: #000; text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em; }
+header nav { display: flex; gap: 1rem; }
+header nav a { font-size: 0.8125rem; color: #555; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; }
+header nav a:hover { color: #000; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #000; text-align: center; font-size: 0.75rem; color: #777; }
+footer a { color: #555; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; }
+footer a:hover { color: #000; }
+@media (max-width: 640px) { body { margin: 20px auto; padding: 0 15px; } header { flex-direction: column; gap: 0.5rem; } footer { flex-direction: column; } }
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="brand">evaldriven.org</a>
+  <nav>
+    <a href="https://github.com/{{ site.repo }}">source</a>
+  </nav>
+</header>
+<main>
+  <article>
+    {{ content | safe }}
+    <h2 id="faq">FAQ</h2>
+    {% for faq in faqs %}
+    <h3>{{ faq.q }}</h3>
+    <p>{{ faq.a }}</p>
+    {% endfor %}
+    <h2 id="signatories">Signatories</h2>
+    <p><a href="https://github.com/{{ site.repo }}">Star</a> to sign. <a href="https://github.com/{{ site.repo }}/fork">Fork</a> to create your own.</p>
+    {% if github.stargazers.length > 0 %}
+    <ul style="columns: 2; column-gap: 1.5rem; list-style: none; padding-left: 0;">
+    {% for user in github.stargazers %}
+      <li><a href="https://github.com/{{ user }}">{{ user }}</a></li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    <p><em>Be the first to sign.</em></p>
+    {% endif %}
+    <p style="font-size: 0.8em; color: #777;"><a href="https://github.com/{{ site.repo }}/watchers" style="color: #777;">{{ github.watchers }} watching</a> &middot; <a href="https://github.com/{{ site.repo }}/forks" style="color: #777;">{{ github.forks }} forks</a></p>
+  </article>
+</main>
+<footer>
+  <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> · <a href="/sitemap.xml">sitemap</a> · <a href="/llms.txt">llms.txt</a> · <a href="https://github.com/{{ site.repo }}">source</a>
+</footer>
+</body>
+</html>

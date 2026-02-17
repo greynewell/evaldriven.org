@@ -1,0 +1,26 @@
+[
+  {
+    "q": "How is eval-driven development different from test-driven development?",
+    "a": "TDD uses binary pass/fail criteria that work for deterministic code. AI systems are probabilistic\u2014outputs vary across runs, models, and prompts. Eval-driven development requires defining success thresholds before writing tests: what score is good enough? What regression is acceptable? That threshold-setting step is the part that experienced test-driven developers do intuitively but rarely formalize. EDD makes it explicit and mandatory."
+  },
+  {
+    "q": "Isn't this just MLOps?",
+    "a": "MLOps treats evaluation as a deployment and monitoring concern. Eval-driven development makes it a development practice that precedes writing code, not something bolted on after. The eval comes first\u2014before the prompt, before the pipeline, before the model selection. MLOps asks \"is it still working?\" EDD asks \"how do we know it works at all?\""
+  },
+  {
+    "q": "You can't evaluate subjective AI outputs.",
+    "a": "You can. Define rubrics, use LLM-as-judge, measure consistency across runs. \"Subjective\" usually means \"we haven't defined our criteria yet\"\u2014which is exactly the problem eval-driven development solves. If you can't articulate what good looks like, you can't build toward it."
+  },
+  {
+    "q": "Evals are too slow and expensive to run in CI.",
+    "a": "Tier them. Fast, cheap smoke evals on every commit. Comprehensive suites nightly. Same pattern as unit tests versus integration tests. The cost of not running evals is shipping regressions to users\u2014that's more expensive."
+  },
+  {
+    "q": "My use case is just one API call. I don't need this.",
+    "a": "That call will regress when the model updates, the prompt drifts, or the context changes. The simpler the integration, the easier the eval\u2014no excuse not to have one."
+  },
+  {
+    "q": "How is this different from A/B testing?",
+    "a": "A/B testing experiments on users post-deploy. Evals catch problems pre-deploy, deterministically, without shipping broken experiences to real people. A/B testing tells you which version users prefer. Evals tell you whether either version is good enough to ship."
+  }
+]

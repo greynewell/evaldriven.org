@@ -21,8 +21,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate OG image
         run: pip install Pillow && python3 build.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Build site
+        run: npm ci && npx eleventy
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -31,7 +44,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy output --project-name=evaldriven-org
+          command: pages deploy _site --project-name=evaldriven-org
 
       - name: Tweet daily update
         if: github.event_name == 'schedule' || inputs.tweet == true

@@ -1,0 +1,17 @@
+{
+  "title": "Eval-Driven Development",
+  "description": "A manifesto for evaluation-driven AI development. Why every AI system needs deterministic, automated evaluation as a first-class engineering practice.",
+  "author": "Grey Newell",
+  "base_url": "https://evaldriven.org",
+  "repo": "greynewell/evaldriven.org",
+  "keywords": [
+    "eval-driven development",
+    "AI evaluation",
+    "LLM evaluation",
+    "model evaluation",
+    "evaluation engineering",
+    "CI/CD for LLMs",
+    "deterministic testing",
+    "AI quality assurance"
+  ]
+}

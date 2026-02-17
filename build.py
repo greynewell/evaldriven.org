@@ -1,237 +1,26 @@
 #!/usr/bin/env python3
-"""Build evaldriven.org: README.md + stargazers → static HTML site."""
+"""Generate OG image for evaldriven.org with current signatory count."""
 
-import json
-import re
 import subprocess
 import sys
-import html as html_mod
 from pathlib import Path
-from datetime import datetime
 
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).parent
-OUTPUT = ROOT / "output"
-README = ROOT / "README.md"
-
-# Site metadata (not in README so GitHub renders it clean)
-SITE = {
-    "title": "Eval-Driven Development",
-    "description": "A manifesto for evaluation-driven AI development. Why every AI system needs deterministic, automated evaluation as a first-class engineering practice.",
-    "author": "Grey Newell",
-    "base_url": "https://evaldriven.org",
-    "repo": "greynewell/evaldriven.org",
-    "keywords": [
-        "eval-driven development", "AI evaluation", "LLM evaluation",
-        "model evaluation", "evaluation engineering", "CI/CD for LLMs",
-        "deterministic testing", "AI quality assurance",
-    ],
-}
+REPO = "greynewell/evaldriven.org"
 
 
-def md_to_html(md):
-    """Convert markdown to HTML."""
-    lines = md.split("\n")
-    out = []
-    in_ul = False
-    in_ol = False
-    in_code = False
-    code_lines = []
-
-    for line in lines:
-        if line.startswith("```"):
-            if in_code:
-                out.append("<pre><code>" + html_mod.escape("\n".join(code_lines)) + "</code></pre>")
-                code_lines = []
-                in_code = False
-            else:
-                in_code = True
-            continue
-        if in_code:
-            code_lines.append(line)
-            continue
-
-        # Close lists if needed
-        if in_ul and not re.match(r"^[-*] ", line):
-            out.append("</ul>")
-            in_ul = False
-        if in_ol and not re.match(r"^\d+\. ", line):
-            out.append("</ol>")
-            in_ol = False
-
-        # Headings
-        m = re.match(r"^(#{1,6})\s+(.*)", line)
-        if m:
-            level = len(m.group(1))
-            text = m.group(2)
-            slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-            out.append(f'<h{level} id="{slug}">{inline(text)}</h{level}>')
-            continue
-
-        # Horizontal rule
-        if re.match(r"^---+\s*$", line):
-            out.append("<hr>")
-            continue
-
-        # Unordered list items
-        m = re.match(r"^[-*] (.*)", line)
-        if m:
-            if not in_ul:
-                out.append("<ul>")
-                in_ul = True
-            out.append(f"<li>{inline(m.group(1))}</li>")
-            continue
-
-        # Ordered list items
-        m = re.match(r"^\d+\. (.*)", line)
-        if m:
-            if not in_ol:
-                out.append("<ol>")
-                in_ol = True
-            out.append(f"<li>{inline(m.group(1))}</li>")
-            continue
-
-        # Blockquote
-        if line.startswith("> "):
-            out.append(f"<blockquote><p>{inline(line[2:])}</p></blockquote>")
-            continue
-
-        # Empty line
-        if not line.strip():
-            out.append("")
-            continue
-
-        # Paragraph
-        out.append(f"<p>{inline(line)}</p>")
-
-    if in_ul:
-        out.append("</ul>")
-    if in_ol:
-        out.append("</ol>")
-
-    return "\n".join(out)
-
-
-def inline(text):
-    """Process inline markdown formatting."""
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
-    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
-    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
-    return text
-
-
-def fetch_stargazers():
-    """Fetch all stargazers via gh CLI."""
-    users = []
-    page = 1
-    while True:
-        try:
-            result = subprocess.run(
-                ["gh", "api",
-                 f"repos/{SITE['repo']}/stargazers?per_page=100&page={page}",
-                 "--jq", ".[].login"],
-                capture_output=True, text=True, timeout=30
-            )
-            batch = result.stdout.strip()
-            if not batch:
-                break
-            users.extend(batch.split("\n"))
-            page += 1
-        except Exception:
-            break
-    return users
-
-
-def fetch_repo_stats():
-    """Fetch fork and watcher counts from the repo."""
+def fetch_stargazer_count():
+    """Fetch stargazer count via gh CLI."""
     try:
         result = subprocess.run(
-            ["gh", "api", f"repos/{SITE['repo']}",
-             "--jq", "[.forks_count, .subscribers_count] | @tsv"],
+            ["gh", "api", f"repos/{REPO}", "--jq", ".stargazers_count"],
             capture_output=True, text=True, timeout=30,
         )
-        parts = result.stdout.strip().split("\t")
-        return {"forks": int(parts[0]), "watchers": int(parts[1])}
+        return int(result.stdout.strip())
     except Exception:
-        return {"forks": 0, "watchers": 0}
-
-
-def build_signatories_html(users, stats):
-    """Build the signatories section."""
-    repo_url = f"https://github.com/{SITE['repo']}"
-    h = '<h2 id="signatories">Signatories</h2>\n'
-    h += f'<p><a href="{repo_url}">Star</a> to sign. <a href="{repo_url}/fork">Fork</a> to create your own.</p>\n'
-    if users:
-        h += '<ul style="columns: 2; column-gap: 1.5rem; list-style: none; padding-left: 0;">\n'
-        for login in users:
-            if login.strip():
-                h += f'<li><a href="https://github.com/{login}">{login}</a></li>\n'
-        h += "</ul>\n"
-    else:
-        h += "<p><em>Be the first to sign.</em></p>\n"
-    h += f'<p style="font-size: 0.8em; color: #777;">'
-    h += f'<a href="{repo_url}/watchers" style="color: #777;">{stats["watchers"]} watching</a>'
-    h += f' &middot; <a href="{repo_url}/forks" style="color: #777;">{stats["forks"]} forks</a>'
-    h += '</p>\n'
-    return h
-
-
-FAQS = [
-    {
-        "q": "How is eval-driven development different from test-driven development?",
-        "a": "TDD uses binary pass/fail criteria that work for deterministic code. AI systems are probabilistic\u2014outputs vary across runs, models, and prompts. Eval-driven development requires defining success thresholds before writing tests: what score is good enough? What regression is acceptable? That threshold-setting step is the part that experienced test-driven developers do intuitively but rarely formalize. EDD makes it explicit and mandatory.",
-    },
-    {
-        "q": "Isn't this just MLOps?",
-        "a": "MLOps treats evaluation as a deployment and monitoring concern. Eval-driven development makes it a development practice that precedes writing code, not something bolted on after. The eval comes first\u2014before the prompt, before the pipeline, before the model selection. MLOps asks \"is it still working?\" EDD asks \"how do we know it works at all?\"",
-    },
-    {
-        "q": "You can't evaluate subjective AI outputs.",
-        "a": "You can. Define rubrics, use LLM-as-judge, measure consistency across runs. \"Subjective\" usually means \"we haven't defined our criteria yet\"\u2014which is exactly the problem eval-driven development solves. If you can't articulate what good looks like, you can't build toward it.",
-    },
-    {
-        "q": "Evals are too slow and expensive to run in CI.",
-        "a": "Tier them. Fast, cheap smoke evals on every commit. Comprehensive suites nightly. Same pattern as unit tests versus integration tests. The cost of not running evals is shipping regressions to users\u2014that's more expensive.",
-    },
-    {
-        "q": "My use case is just one API call. I don't need this.",
-        "a": "That call will regress when the model updates, the prompt drifts, or the context changes. The simpler the integration, the easier the eval\u2014no excuse not to have one.",
-    },
-    {
-        "q": "How is this different from A/B testing?",
-        "a": "A/B testing experiments on users post-deploy. Evals catch problems pre-deploy, deterministically, without shipping broken experiences to real people. A/B testing tells you which version users prefer. Evals tell you whether either version is good enough to ship.",
-    },
-]
-
-
-def build_faq_html():
-    """Build the FAQ section HTML."""
-    h = '<h2 id="faq">FAQ</h2>\n'
-    for faq in FAQS:
-        h += f"<h3>{html_mod.escape(faq['q'])}</h3>\n"
-        h += f"<p>{html_mod.escape(faq['a'])}</p>\n"
-    return h
-
-
-def build_faq_schema():
-    """Build FAQPage JSON-LD."""
-    return json.dumps({
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-            {
-                "@type": "Question",
-                "name": faq["q"],
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": faq["a"],
-                },
-            }
-            for faq in FAQS
-        ],
-    })
+        return 0
 
 
 def build_og_image(count):
@@ -240,8 +29,6 @@ def build_og_image(count):
     img = Image.new("RGB", (W, H), "#ffffff")
     draw = ImageDraw.Draw(img)
 
-    # Use Courier/monospace to match the site aesthetic.
-    # DejaVu Sans Mono is available on Ubuntu runners; fall back to default.
     def mono(size):
         for name in ["DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf",
                       "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
@@ -263,169 +50,37 @@ def build_og_image(count):
                 continue
         return mono(size)
 
-    # Border
     draw.rectangle([20, 20, W - 21, H - 21], outline="#000000", width=3)
 
-    # Checkmark
     check_font = mono(72)
     draw.text((W // 2, 120), "\u2713", fill="#000000", font=check_font, anchor="mm")
 
-    # Title
     title_font = bold(52)
     draw.text((W // 2, 220), "EVAL-DRIVEN", fill="#000000", font=title_font, anchor="mm")
     draw.text((W // 2, 285), "DEVELOPMENT", fill="#000000", font=title_font, anchor="mm")
 
-    # Divider
     draw.line([(200, 330), (W - 200, 330)], fill="#000000", width=2)
 
-    # Subtitle
     sub_font = mono(30)
     draw.text((W // 2, 380), "A manifesto for evaluation-driven", fill="#333333", font=sub_font, anchor="mm")
     draw.text((W // 2, 420), "AI development", fill="#333333", font=sub_font, anchor="mm")
 
-    # Count
     count_font = bold(36)
     draw.text((W // 2, 500), f"{count} signatories", fill="#000000", font=count_font, anchor="mm")
 
-    # URL
     url_font = mono(22)
     draw.text((W // 2, 565), "evaldriven.org", fill="#555555", font=url_font, anchor="mm")
 
-    path = OUTPUT / "og.png"
+    path = ROOT / "og.png"
     img.save(path, "PNG")
     return path
 
 
-def build_page(body_html, faq_html, signatories_html):
-    """Generate the full HTML page."""
-    title = SITE["title"]
-    desc = SITE["description"]
-    author = SITE["author"]
-    base = SITE["base_url"]
-    now = datetime.now().strftime("%Y-%m-%d")
-
-    json_ld = json.dumps({
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": title,
-        "description": desc,
-        "author": {"@type": "Person", "name": author, "url": "https://greynewell.com"},
-        "publisher": {"@type": "Person", "name": author, "url": "https://greynewell.com"},
-        "url": base,
-        "datePublished": "2026-02-15",
-        "dateModified": now,
-        "mainEntityOfPage": {"@type": "WebPage", "@id": base},
-        "keywords": SITE["keywords"],
-    })
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title}</title>
-<meta name="description" content="{desc}">
-<meta name="author" content="{author}">
-<meta property="og:title" content="{title}">
-<meta property="og:description" content="{desc}">
-<meta property="og:url" content="{base}/">
-<meta property="og:type" content="article">
-<meta property="og:image" content="{base}/og.png">
-<meta property="og:site_name" content="{title}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{title}">
-<meta name="twitter:description" content="{desc}">
-<meta name="twitter:image" content="{base}/og.png">
-<link rel="canonical" href="{base}/">
-<meta name="robots" content="index, follow">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='4' y='26' font-size='28' font-family='monospace'%3E%E2%9C%93%3C/text%3E%3C/svg%3E">
-<script type="application/ld+json">{json_ld}</script>
-<script type="application/ld+json">{build_faq_schema()}</script>
-<style>
-*, *::before, *::after {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: 'Courier New', Courier, monospace; max-width: 650px; margin: 40px auto; padding: 0 20px; line-height: 1.6; background: #fff; color: #111; font-size: 16px; }}
-h1, h2, h3 {{ font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #000; }}
-h1 {{ font-size: 1.5rem; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em; }}
-h2 {{ font-size: 1.125rem; margin: 2rem 0 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #000; padding-bottom: 0.25rem; }}
-h3 {{ font-size: 1rem; margin: 1.5rem 0 0.5rem; }}
-p {{ margin: 0.75rem 0; }}
-ul, ol {{ padding-left: 1.5rem; margin: 0.75rem 0; }}
-li {{ margin: 0.3rem 0; }}
-a {{ color: #111; text-decoration: underline; }}
-a:hover {{ color: #555; }}
-code {{ font-family: 'Courier New', Courier, monospace; font-size: 0.9em; background: #f5f5f5; padding: 0.1em 0.3em; }}
-pre {{ background: #f5f5f5; border: 1px solid #ddd; padding: 1rem; overflow-x: auto; margin: 1rem 0; line-height: 1.4; }}
-pre code {{ background: none; padding: 0; font-size: 0.875rem; }}
-blockquote {{ border-left: 3px solid #111; padding: 0.5rem 1rem; margin: 1rem 0; color: #333; }}
-hr {{ border: none; border-top: 1px solid #111; margin: 2rem 0; }}
-footer {{ margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #000; text-align: center; font-size: 0.75rem; color: #777; }}
-footer a {{ color: #555; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; }}
-footer a:hover {{ color: #000; }}
-@media (max-width: 640px) {{ body {{ margin: 20px auto; padding: 0 15px; }} footer {{ flex-direction: column; }} }}
-</style>
-</head>
-<body>
-<main>
-  <article>
-    {body_html}
-    {faq_html}
-    {signatories_html}
-  </article>
-</main>
-<footer>
-  <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> · <a href="/sitemap.xml">sitemap</a> · <a href="/llms.txt">llms.txt</a> · <a href="https://github.com/{SITE['repo']}">source</a>
-</footer>
-</body>
-</html>"""
-
-
 def main():
-    readme_text = README.read_text()
-
-    # Strip frontmatter if present (for backwards compat)
-    if readme_text.startswith("---"):
-        end = readme_text.index("---", 3)
-        readme_text = readme_text[end + 3:].strip()
-
-    print("Fetching stargazers...", file=sys.stderr)
-    users = fetch_stargazers()
-    print(f"  Found {len(users)} stargazers", file=sys.stderr)
-
-    stats = fetch_repo_stats()
-    print(f"  {stats['forks']} forks, {stats['watchers']} watching", file=sys.stderr)
-
-    body_html = md_to_html(readme_text)
-    faq_html = build_faq_html()
-    signatories_html = build_signatories_html(users, stats)
-
-    OUTPUT.mkdir(exist_ok=True)
-    build_og_image(len(users))
-    (OUTPUT / "index.html").write_text(build_page(body_html, faq_html, signatories_html))
-    (OUTPUT / "sitemap.xml").write_text(
-        f'<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f'<url><loc>{SITE["base_url"]}/</loc><priority>1.0</priority>'
-        f'<changefreq>weekly</changefreq></url>\n</urlset>'
-    )
-    (OUTPUT / "robots.txt").write_text(
-        f'User-agent: *\nAllow: /\n\n'
-        f'User-agent: GPTBot\nAllow: /\n\n'
-        f'User-agent: ClaudeBot\nAllow: /\n\n'
-        f'User-agent: PerplexityBot\nAllow: /\n\n'
-        f'Sitemap: {SITE["base_url"]}/sitemap.xml\n'
-    )
-    (OUTPUT / "llms.txt").write_text(
-        f'# {SITE["title"]}\n\n'
-        f'> {SITE["description"]}\n\n'
-        f'## Author\n- [{SITE["author"]}](https://greynewell.com)\n\n'
-        f'## Source\n- [GitHub](https://github.com/{SITE["repo"]})\n'
-    )
-    (OUTPUT / "CNAME").write_text("evaldriven.org\n")
-
-    print("Build complete!", file=sys.stderr)
-    for f in sorted(OUTPUT.iterdir()):
-        if f.is_file():
-            print(f"  {f.name} ({f.stat().st_size} bytes)", file=sys.stderr)
+    count = fetch_stargazer_count()
+    print(f"Stargazer count: {count}", file=sys.stderr)
+    path = build_og_image(count)
+    print(f"Generated {path} ({path.stat().st_size} bytes)", file=sys.stderr)
 
 
 if __name__ == "__main__":
