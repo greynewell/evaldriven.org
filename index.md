@@ -15,6 +15,10 @@ Software development is now agent-driven. AI writes the code. The engineer's job
 
 We propose **Eval-Driven Development**: a discipline where every probabilistic system starts with a specification of correctness, and nothing ships without automated proof that it meets that spec.
 
+## Definitions
+
+An **eval** is a dataset, a grader, and a harness. The grader and harness are built before you write code. The dataset evolves from synthetic to production-representative. The commitment to measure is there from the start, even if the full specifics cannot be known at project inception.
+
 ## Principles
 
 ### 1. Evaluation is the product
