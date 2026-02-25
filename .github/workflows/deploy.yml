@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '0 13 * * *'  # 8 AM EST daily
+    - cron: '0 13 * * 5'  # 8 AM EST every Friday
 
 jobs:
   build-and-deploy:
