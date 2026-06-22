@@ -45,14 +45,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy _site --project-name=evaldriven-org
-
-      - name: Tweet daily update
-        if: github.event_name == 'schedule' || inputs.tweet == true
-        run: pip install requests requests-oauthlib && python3 post_tweet.py
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PINNED_TWEET_ID: ${{ secrets.PINNED_TWEET_ID }}
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
